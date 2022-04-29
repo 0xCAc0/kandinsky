@@ -3,13 +3,15 @@ pragma solidity >=0.8.4;
 
 import "../fugit-tempus/IssuanceNode.sol";
 import "./Avatars.sol";
+import "./IAxiom.sol";
+
 // import "../proxy/ProxyFactory.sol";
 
 // todo: for proof-of-concept don't use a ProxyFactory yet,
 //       nor care about upgradability, and hold avatars
 //       internally in Roots contract
 // contract RootsAxiom is ProxyFactory {
-contract RootsAxiom is Avatars {
+contract RootsAxiom is Avatars, IAxiom {
     // -- Storage
 
     /** Store the core reduction factor as a constant
@@ -28,10 +30,8 @@ contract RootsAxiom is Avatars {
 
     // -- External functions
 
-    // solhint-disable-next-line 
-    constructor() {
-
-    }
+    // solhint-disable-next-line
+    constructor() {}
 
     /** createNode can be called once by any address
      *  and it will create a new IssuanceNode (todo: make a proxy)
@@ -40,13 +40,9 @@ contract RootsAxiom is Avatars {
      *  corresponding node.
      */
     function createNode() external {
-        require(
-            !isAvatar(msg.sender),
-            "Sender cannot already be an avatar."
-        );
+        require(!isAvatar(msg.sender), "Sender cannot already be an avatar.");
         IssuanceNode newNode = new IssuanceNode(msg.sender, GAMMA_64x64);
 
         register(msg.sender, address(newNode));
     }
-
 }
