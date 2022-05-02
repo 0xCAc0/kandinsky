@@ -69,7 +69,7 @@ contract PathTransfer is ITransport {
             _amounts.length == segments,
             "PathTransfer: array lengths amounts must match nodes."
         );
-        address[] memory seen;
+        address[] memory vertices;
         for (uint256 i = 0; i < segments; i++) {
             require(
                 _amounts[i] <= uint256(type(int256).max),
