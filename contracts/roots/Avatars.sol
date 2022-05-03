@@ -42,17 +42,23 @@ contract Avatars {
 
     // -- Public functions
 
-    /** isAvatar returns returns true if the address of
-     *  of the associated node, if the address
-     *  has been registered as an avatar.
+    /** isAvatar returns returns true if any node is registered
+     *  with the given avatar address
      */
     function isAvatar(address _avatar) public view returns (bool) {
         return (nodes[_avatar] != IGraphNode(address(0)));
     }
 
+    function isNode(IGraphNode _node) public view returns (bool) {
+        return (avatars[_node] != address(0));
+    }
+
     // -- Internal functions
 
-    // @dev as internal function, assumes never called with _avatar zero address
+    // @dev as internal function, assumes never called
+    //      with _avatar zero address, or
+    //      that avatar can equal node address or
+    //      an attempt of registering reverse of already registered relations.
     function register(address _avatar, IGraphNode _node) internal {
         require(
             _node != IGraphNode(address(0)),
@@ -67,7 +73,7 @@ contract Avatars {
             "Avatars: Node is already registered."
         );
 
-        // regsiter node to avatar
+        // register node to avatar
         nodes[_avatar] = _node;
         // and register reverse relationship
         avatars[_node] = _avatar;

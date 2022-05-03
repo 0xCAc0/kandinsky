@@ -7,8 +7,9 @@ import "./IGraphNode.sol";
 contract Graph {
     // -- Constants
 
-    /** Sentinel circle is a constant marker */
-    IGraphNode public constant SENTINEL_CIRCLE = IGraphNode(address(0x1));
+    /** To trust a node the trust epoch is set to max
+     */
+    uint256 public constant MAX_FUTURE_EPOCH = type(uint256).max;
 
     // -- Storage
 
@@ -21,7 +22,8 @@ contract Graph {
     /* Circles stores the trusted nodes of a node in a linked list */
     mapping(IGraphNode => mapping(IGraphNode => IGraphNode)) public circles;
 
-    /** Trust epochs map a node to an epoch for each node at which trust is ended.
+    /** Trust epochs maps the epochs at which trust expires
+     *  for each node relative to the other nodes.
      *  Thus for all nodes, by default trust ended on the zero-th epoch; and,
      *  upon trusting the trustEpoch is set to MAX_INT256, effectively the
      *  infinite future.
@@ -44,7 +46,21 @@ contract Graph {
     // @dev this signature breaks with the Circles v1 contract
     //      as it omits a "limit" percentage - this concept is not
     //      present here, as trust has been made binary.
-    function trust(IGraphNode _node) external returns (bool) {
-        // require(axiom.isAvatar(msg.sender)
+    function trust(IGraphNode _node) external {
+        IGraphNode center = IGraphNode(msg.sender);
+        require(axiom.isNode(center), "Graph: caller must be registered node.");
+        require(axiom.isNode(_node), "Graph: trusted node must be registered.");
+
+        registerTrust(center, _node, MAX_FUTURE_EPOCH);
     }
+
+    function untrust(IGraphNode _node) external {}
+
+    // -- Private functions
+
+    function registerTrust(
+        IGraphNode _centerNode,
+        IGraphNode _circleNode,
+        uint256 trustEpoch
+    ) private {}
 }

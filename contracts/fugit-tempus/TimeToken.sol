@@ -2,6 +2,7 @@
 pragma solidity >=0.8.4;
 
 import "../lib/Math64x64.sol";
+import "./Epoch.sol";
 
 /**
  * @dev Proof-of-concept implementation of temporally discounted tokens.
@@ -9,13 +10,13 @@ import "../lib/Math64x64.sol";
 contract TimeToken {
     // -- Constants
 
-    /** Coarse-grain all time calculations to two minutes accuracy
-     *  This facilitates services interacting with the network
-     *  as transaction execution has a reduced dependency on the
-     *  timestamp provided in the block header, and can be easier
-     *  predicted and cached.
-     */
-    uint256 public constant TIME_RESOLUTION = 2 minutes;
+    // /** Coarse-grain all time calculations to two minutes accuracy
+    //  *  This facilitates services interacting with the network
+    //  *  as transaction execution has a reduced dependency on the
+    //  *  timestamp provided in the block header, and can be easier
+    //  *  predicted and cached.
+    //  */
+    // uint256 public constant TIME_RESOLUTION = 2 minutes;
 
     /** One unit of new tokens is issued per period to the source address.
      *  Set to one unit per hour, which approximately matches 24 units per day
@@ -23,19 +24,19 @@ contract TimeToken {
      */
     uint256 public constant ISSUANCE_PERIOD = 1 hours;
 
-    /** Arbitrary origin of counting epochs on 10 December 2021
-     *  "Hope" is the thing with feathers -
-     */
-    uint256 public constant ZERO_TIME = uint256(1639094400);
+    // /** Arbitrary origin of counting epochs on 10 December 2021
+    //  *  "Hope" is the thing with feathers -
+    //  */
+    // uint256 public constant ZERO_TIME = uint256(1639094400);
 
-    /** Epoch duration preserves history of balances
-     *  at the end of each epoch (sparsely stored);
-     *  this is done to express fungeability of tokens
-     *  in function of time: it prevents that older tokens
-     *  can retroactively lose their fungeability because
-     *  trust relations are retracted.
-     */
-    uint256 public constant EPOCH_DURATION = 1 weeks;
+    // /** Epoch duration preserves history of balances
+    //  *  at the end of each epoch (sparsely stored);
+    //  *  this is done to express fungeability of tokens
+    //  *  in function of time: it prevents that older tokens
+    //  *  can retroactively lose their fungeability because
+    //  *  trust relations are retracted.
+    //  */
+    // uint256 public constant EPOCH_DURATION = 1 weeks;
 
     /** Signup bonus to enable immediate usage for new nodes
      *  is expressed as a number of periods of additional
@@ -152,7 +153,7 @@ contract TimeToken {
 
         // register epoch time of creation of this node and
         // set last issuance time
-        uint256 timestamp = epochTime();
+        uint256 timestamp = Epoch.epochTime();
         creationTime = timestamp;
         lastIssuanceTime = timestamp;
 
@@ -188,7 +189,7 @@ contract TimeToken {
         // todo: this probably can be cleanly lifted into an internal mint
         //       but constructors are special so restructure
         //       after general mint is written
-        (uint256 cEpoch, uint256 offset) = currentEpochAndOffset();
+        (uint256 cEpoch, uint256 offset) = Epoch.currentEpochAndOffset();
         // uint256 currentE = currentEpoch();
         epochBalances[_issueSource][cEpoch] = initialSourceBalance;
         lastEpochs[_issueSource] = cEpoch;
@@ -235,7 +236,7 @@ contract TimeToken {
         returns (uint256 balance_, uint256 unixTimestamp_)
     {
         uint256 lastEpoch = lastEpochs[_tokenHolder];
-        unixTimestamp_ = ZERO_TIME + epochTime();
+        unixTimestamp_ = Epoch.ZERO_TIME + Epoch.epochTime();
         // if last epoch is the zero-th epoch, then holder has no tokens
         if (lastEpoch == SENTINEL_EPOCHS) return (uint256(0), unixTimestamp_);
         // todo: we call epochTime() twice,
@@ -247,30 +248,31 @@ contract TimeToken {
         balance_ = balanceAtOffset(_tokenHolder, timeLapse);
     }
 
-    /** Rounds the block timestamp since ZERO_TIME
-     *  down to the last hour (TIME_RESOLUTION) and
-     *  returns the epoch time in seconds since ZERO_TIME.
-     */
-    function epochTime() public view returns (uint256) {
-        // solidity rounds to zero for integer division; all are uint256
-        return
-            ((block.timestamp - ZERO_TIME) / TIME_RESOLUTION) * TIME_RESOLUTION;
-    }
+    // /** Rounds the block timestamp since ZERO_TIME
+    //  *  down to the last hour (TIME_RESOLUTION) and
+    //  *  returns the epoch time in seconds since ZERO_TIME.
+    //  */
+    // function epochTime() public view returns (uint256) {
+    //     // solidity rounds to zero for integer division; all are uint256
+    //     return
+    //         ((block.timestamp - ZERO_TIME) / TIME_RESOLUTION) *
+    //             TIME_RESOLUTION;
+    // }
 
-    /** The current epoch is counted from a recent global ZERO_TIME in the past
-     *  (but avoid unix zero time) so that it never returns epoch zero;
-     *  offset is the seconds since start of current epoch.
-     */
-    function currentEpochAndOffset()
-        public
-        view
-        returns (uint256 epoch_, uint256 offset_)
-    {
-        uint256 time = epochTime();
-        // again solidity rounds to zero, so epoch boundaries are as expected
-        epoch_ = time / EPOCH_DURATION;
-        offset_ = time - epoch_ * EPOCH_DURATION;
-    }
+    // /** The current epoch is counted from a recent global ZERO_TIME in the past
+    //  *  (but avoid unix zero time) so that it never returns epoch zero;
+    //  *  offset is the seconds since start of current epoch.
+    //  */
+    // function currentEpochAndOffset()
+    //     public
+    //     view
+    //     returns (uint256 epoch_, uint256 offset_)
+    // {
+    //     uint256 time = epochTime();
+    //     // again solidity rounds to zero, so epoch boundaries are as expected
+    //     epoch_ = time / EPOCH_DURATION;
+    //     offset_ = time - epoch_ * EPOCH_DURATION;
+    // }
 
     /** Returns the time counting from provided epoch and offset until
      *  current rounded timestamp.
@@ -281,10 +283,10 @@ contract TimeToken {
         view
         returns (uint256)
     {
-        (uint256 cEpoch, ) = currentEpochAndOffset();
+        (uint256 cEpoch, ) = Epoch.currentEpochAndOffset();
         require(_epoch <= cEpoch, "Epoch cannot lie in the future.");
-        uint256 currentTimestamp = epochTime();
-        uint256 offsetTime = _epoch * EPOCH_DURATION + _offset;
+        uint256 currentTimestamp = Epoch.epochTime();
+        uint256 offsetTime = _epoch * Epoch.EPOCH_DURATION + _offset;
         require(
             offsetTime <= currentTimestamp,
             "Offset cannot lie in the future."
@@ -298,7 +300,7 @@ contract TimeToken {
      *  for the outstanding balance since last called
      */
     function issueToSource() internal {
-        uint256 timestamp = epochTime();
+        uint256 timestamp = Epoch.epochTime();
         require(
             lastIssuanceTime + ISSUANCE_PERIOD < timestamp,
             "Issuance cannot be called again in one period."
@@ -333,7 +335,7 @@ contract TimeToken {
 
         // todo: ERC777: call beforeTokenTransfer to msg.sender / operator
 
-        uint256 timestamp = epochTime();
+        uint256 timestamp = Epoch.epochTime();
         // (uint256 cEpoch,) = currentEpochAndOffset();
 
         // update total supply
@@ -356,7 +358,7 @@ contract TimeToken {
         address _holder,
         uint256 _amount // todo add ERC777 params
     ) private {
-        (uint256 cEpoch, uint256 offset) = currentEpochAndOffset();
+        (uint256 cEpoch, uint256 offset) = Epoch.currentEpochAndOffset();
         uint256 lastEpoch = lastEpochs[_holder];
 
         if (lastEpoch == SENTINEL_EPOCHS) {
@@ -369,7 +371,8 @@ contract TimeToken {
             epochBalances[_holder][cEpoch] = _amount;
         } else if (lastEpoch < cEpoch) {
             // discount previous epoch, and receive in current
-            uint256 timeToEpochEnd = EPOCH_DURATION - lastEpochOffsets[_holder];
+            uint256 timeToEpochEnd = Epoch.EPOCH_DURATION -
+                lastEpochOffsets[_holder];
             uint256 lastEpochBalance = epochBalances[_holder][lastEpoch];
             // discount last epoch balance to end of that epoch
             epochBalances[_holder][lastEpoch] = discountBalance(
@@ -386,7 +389,8 @@ contract TimeToken {
             epochBalances[_holder][cEpoch] = _amount;
         } else if (lastEpoch == cEpoch) {
             // discount existing amount and add new amount
-            uint256 timeToEpochEnd = EPOCH_DURATION - lastEpochOffsets[_holder];
+            uint256 timeToEpochEnd = Epoch.EPOCH_DURATION -
+                lastEpochOffsets[_holder];
             uint256 lastEpochBalance = epochBalances[_holder][lastEpoch];
             epochBalances[_holder][lastEpoch] =
                 discountBalance(lastEpochBalance, timeToEpochEnd, gamma64x64) +
@@ -489,7 +493,7 @@ contract TimeToken {
         balanceUpToEpoch_ = uint256(0);
         while (epoch < _upToEpoch && epoch != SENTINEL_EPOCHS) {
             // calculate the time in seconds up to the desired epoch
-            uint256 deltaTime = (_upToEpoch - epoch - 1) * EPOCH_DURATION;
+            uint256 deltaTime = (_upToEpoch - epoch - 1) * Epoch.EPOCH_DURATION;
             // discount the historic epoch balance
             uint256 discountedBalance = discountBalance(
                 epochBalances[_tokenHolder][epoch],

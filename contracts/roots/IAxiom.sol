@@ -6,6 +6,8 @@ import "../graph/IGraphNode.sol";
 interface IAxiom {
     function isAvatar(address _avatar) external view returns (bool);
 
+    function isNode(IGraphNode _node) external view returns (bool);
+
     function registeredAvatar(IGraphNode _node) external view returns (address);
 
     function registeredNode(address _avatar) external view returns (IGraphNode);
