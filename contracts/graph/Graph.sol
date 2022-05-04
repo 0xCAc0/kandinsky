@@ -1,13 +1,17 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity >=0.8.4;
 
+import "../fugit-tempus/Epoch.sol";
 import "../roots/IAxiom.sol";
 import "./IGraphNode.sol";
 
 contract Graph {
     // -- Constants
 
-    /** To trust a node the trust epoch is set to max
+    /** Sentinel to mark the end of a linked list of nodes trusted */
+    IGraphNode public constant SENTINEL_CIRCLE = IGraphNode(address(0x1));
+
+    /** To trust a node the last trust epoch is set to max uint256
      */
     uint256 public constant MAX_FUTURE_EPOCH = type(uint256).max;
 
@@ -61,6 +65,38 @@ contract Graph {
     function registerTrust(
         IGraphNode _centerNode,
         IGraphNode _circleNode,
-        uint256 trustEpoch
-    ) private {}
+        uint256 _trustEpoch
+    ) private {
+        (uint256 cEpoch, ) = Epoch.currentEpochAndOffset();
+        require(
+            _trustEpoch > cEpoch,
+            "Graph: trust must be asserted up to a future epoch."
+        );
+
+        if (trustEpochs[_centerNode][_circleNode] < _trustEpoch) {
+            // ensure circle node is (re)added to linked-list
+        }
+        // update trust epoch of circle node
+        trustEpochs[_centerNode][_circleNode] = _trustEpoch;
+    }
+
+    function insertNodeInCircle(IGraphNode _centerNode, IGraphNode _circleNode)
+        private
+    {
+        if (circles[_centerNode][_circleNode] != IGraphNode(address(0))) {
+            // node is already an element of the circle, do nothing
+            return;
+        }
+        if (circles[_centerNode][SENTINEL_CIRCLE] == IGraphNode(address(0))) {
+            // check to setup linked list first and add first element
+            circles[_centerNode][SENTINEL_CIRCLE] = _circleNode;
+            circles[_centerNode][_circleNode] = SENTINEL_CIRCLE;
+        } else {
+            // if already initialised, add new circle element
+            circles[_centerNode][_circleNode] = circles[_centerNode][
+                SENTINEL_CIRCLE
+            ];
+            circles[_centerNode][SENTINEL_CIRCLE] = _circleNode;
+        }
+    }
 }

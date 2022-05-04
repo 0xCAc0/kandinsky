@@ -29,7 +29,7 @@ contract IssuanceNode is TimeToken, IGraphNode {
     ) TimeToken(_nodeOwner, _gamma64x64) {
         require(
             _axiom != IAxiom(address(0)),
-            "Node owner must not be null address."
+            "Axiom must not be null address."
         );
         require(
             _nodeOwner != address(0),

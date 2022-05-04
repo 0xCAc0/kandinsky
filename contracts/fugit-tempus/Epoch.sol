@@ -29,7 +29,7 @@ library Epoch {
     // -- Internal functions
 
     /** Rounds the block timestamp since ZERO_TIME
-     *  down to the last hour (TIME_RESOLUTION) and
+     *  down to the last two minutes (TIME_RESOLUTION) and
      *  returns the epoch time in seconds since ZERO_TIME.
      */
     function epochTime() internal view returns (uint256) {
