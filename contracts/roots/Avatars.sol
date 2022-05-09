@@ -2,12 +2,13 @@
 pragma solidity >=0.8.4;
 
 import "../graph/IGraphNode.sol";
+import "./IAvatars.sol";
 
 /** Avatars keeps a global registery of all addresses
  *  which have joint on this chain, as a householding
  *  measure - not related to sybil resistance
  */
-contract Avatars {
+contract Avatars is IAvatars {
     // -- Storage
 
     /** nodes stores the node address given an avatar
@@ -27,6 +28,7 @@ contract Avatars {
     function registeredNode(address _avatar)
         external
         view
+        override
         returns (IGraphNode)
     {
         return nodes[_avatar];
@@ -35,6 +37,7 @@ contract Avatars {
     function registeredAvatar(IGraphNode _node)
         external
         view
+        override
         returns (address)
     {
         return avatars[_node];
@@ -45,11 +48,11 @@ contract Avatars {
     /** isAvatar returns returns true if any node is registered
      *  with the given avatar address
      */
-    function isAvatar(address _avatar) public view returns (bool) {
+    function isAvatar(address _avatar) public view override returns (bool) {
         return (nodes[_avatar] != IGraphNode(address(0)));
     }
 
-    function isNode(IGraphNode _node) public view returns (bool) {
+    function isNode(IGraphNode _node) public view override returns (bool) {
         return (avatars[_node] != address(0));
     }
 

@@ -2,6 +2,8 @@
 pragma solidity >=0.8.4;
 
 import "../fugit-tempus/IssuanceNode.sol";
+import "../graph/Graph.sol";
+import "../graph/IGraph.sol";
 import "./Avatars.sol";
 import "./IAxiom.sol";
 
@@ -12,7 +14,7 @@ import "./IAxiom.sol";
 //       internally in Roots contract
 // contract RootsAxiom is ProxyFactory {
 contract RootsAxiom is Avatars, IAxiom {
-    // -- Storage
+    // -- Constants
 
     /** Store the core reduction factor as a constant
      *  across the graph in a simple first implementation.
@@ -28,10 +30,18 @@ contract RootsAxiom is Avatars, IAxiom {
      */
     int128 public constant GAMMA_64x64 = 18446737054401878016;
 
+    // -- Storage
+
+    /** store a default graph for simplicity now
+     */
+    IGraph public immutable graph;
+
     // -- External functions
 
-    // solhint-disable-next-line
-    constructor() {}
+    constructor() {
+        // for simplicity create a single instance of a graph
+        graph = new Graph(this);
+    }
 
     /** createNode can be called once by any address
      *  and it will create a new IssuanceNode (todo: make a proxy)
@@ -41,8 +51,8 @@ contract RootsAxiom is Avatars, IAxiom {
      */
     function createNode() external {
         require(!isAvatar(msg.sender), "Sender cannot already be an avatar.");
-        IssuanceNode newNode = new IssuanceNode(msg.sender, GAMMA_64x64);
+        IssuanceNode newNode = new IssuanceNode(this, msg.sender, GAMMA_64x64);
 
-        register(msg.sender, address(newNode));
+        register(msg.sender, IGraphNode(newNode));
     }
 }

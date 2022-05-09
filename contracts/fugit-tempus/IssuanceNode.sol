@@ -3,6 +3,7 @@ pragma solidity >=0.8.4;
 
 import "../roots/IAxiom.sol";
 import "../graph/IGraphNode.sol";
+import "../graph/IGraph.sol";
 import "./TimeToken.sol";
 
 /** Issuance Node is a node on the social graph
@@ -17,6 +18,8 @@ contract IssuanceNode is TimeToken, IGraphNode {
     /** Axiom registers core compatibility between contracts */
     IAxiom public immutable axiom;
 
+    IGraph public immutable graph;
+
     /** Node owner to whom new notes are issued */
     address public immutable nodeOwner;
 
@@ -25,11 +28,16 @@ contract IssuanceNode is TimeToken, IGraphNode {
     constructor(
         IAxiom _axiom,
         address _nodeOwner,
+        IGraph _graph,
         int128 _gamma64x64
     ) TimeToken(_nodeOwner, _gamma64x64) {
         require(
             _axiom != IAxiom(address(0)),
             "Axiom must not be null address."
+        );
+        require(
+            _graph != IGraph(address(0)),
+            "Graph must not be null address."
         );
         require(
             _nodeOwner != address(0),
@@ -39,13 +47,14 @@ contract IssuanceNode is TimeToken, IGraphNode {
         // store axiom reference for registry calls
         axiom = _axiom;
 
+        // store graph contract for (de)registering trust
+        graph = _graph;
+
         // the owner of this node will get the new notes issued on equal time
         nodeOwner = _nodeOwner;
     }
 
-    function isTrusted(
-        IGraphNode /* _node */
-    ) external pure override returns (bool) {
-        return false;
+    function trusts(IGraphNode _node) external view override returns (bool) {
+        return graph.isTrusted(this, _node);
     }
 }

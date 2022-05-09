@@ -5,7 +5,7 @@ import "../fugit-tempus/Epoch.sol";
 import "../roots/IAxiom.sol";
 import "./IGraphNode.sol";
 
-contract Graph {
+contract Graph is IGraph {
     // -- Constants
 
     /** Sentinel to mark the end of a linked list of nodes trusted */
@@ -36,6 +36,20 @@ contract Graph {
     //       such that trust relations require explicit reaffirmation
     mapping(IGraphNode => mapping(IGraphNode => uint256)) public trustEpochs;
 
+    // -- Function modifiers
+
+    modifier onGraph(IGraphNode _node) {
+        require(
+            axiom.isNode(IGraphNode(msg.sender)),
+            "Graph: caller must be registered node."
+        );
+        require(axiom.isNode(_node), "Graph: trusted node must be registered.");
+
+        _;
+    }
+
+    // -- External functions
+
     constructor(IAxiom _axiom) {
         require(
             address(_axiom) != address(0),
@@ -50,15 +64,40 @@ contract Graph {
     // @dev this signature breaks with the Circles v1 contract
     //      as it omits a "limit" percentage - this concept is not
     //      present here, as trust has been made binary.
-    function trust(IGraphNode _node) external {
-        IGraphNode center = IGraphNode(msg.sender);
-        require(axiom.isNode(center), "Graph: caller must be registered node.");
-        require(axiom.isNode(_node), "Graph: trusted node must be registered.");
-
-        registerTrust(center, _node, MAX_FUTURE_EPOCH);
+    function trust(IGraphNode _node) external onGraph(_node) {
+        registerTrust(IGraphNode(msg.sender), _node, MAX_FUTURE_EPOCH);
     }
 
-    function untrust(IGraphNode _node) external {}
+    function untrust(IGraphNode _node) external onGraph(_node) {
+        (uint256 cEpoch, ) = Epoch.currentEpochAndOffset();
+
+        // trust is set to expire after the next epoch
+        expireTrust(IGraphNode(msg.sender), _node, cEpoch + 1);
+    }
+
+    /** isTrusted returns true if the registered trust expiration is
+     *  in the current or a future epoch.
+     */
+    function isTrusted(IGraphNode _centerNode, IGraphNode _circleNode)
+        external
+        view
+        override
+        returns (bool)
+    {
+        (uint256 cEpoch, ) = Epoch.currentEpochAndOffset();
+        return (trustEpochs[_centerNode][_circleNode] >= cEpoch);
+    }
+
+    function isMutuallyTrusted(IGraphNode _centerNode, IGraphNode _circleNode)
+        external
+        view
+        override
+        returns (bool)
+    {
+        (uint256 cEpoch, ) = Epoch.currentEpochAndOffset();
+        return ((trustEpochs[_centerNode][_circleNode] >= cEpoch) &&
+            (trustEpochs[_circleNode][_centerNode] >= cEpoch));
+    }
 
     // -- Private functions
 
@@ -75,9 +114,28 @@ contract Graph {
 
         if (trustEpochs[_centerNode][_circleNode] < _trustEpoch) {
             // ensure circle node is (re)added to linked-list
+            // as it may have been pruned from the linked-list
+            // if it had expired
+            insertNodeInCircle(_centerNode, _circleNode);
         }
         // update trust epoch of circle node
         trustEpochs[_centerNode][_circleNode] = _trustEpoch;
+
+        // @dev: emit event Trust() here
+    }
+
+    function expireTrust(
+        IGraphNode _centerNode,
+        IGraphNode _circleNode,
+        uint256 _expirationEpoch
+    ) private {
+        require(
+            trustEpochs[_centerNode][_circleNode] > _expirationEpoch,
+            "Graph: trust is already set to (have) expire(d)."
+        );
+        trustEpochs[_centerNode][_circleNode] = _expirationEpoch;
+
+        // @dev: emit event Untrust() here
     }
 
     function insertNodeInCircle(IGraphNode _centerNode, IGraphNode _circleNode)
@@ -88,15 +146,17 @@ contract Graph {
             return;
         }
         if (circles[_centerNode][SENTINEL_CIRCLE] == IGraphNode(address(0))) {
-            // check to setup linked list first and add first element
-            circles[_centerNode][SENTINEL_CIRCLE] = _circleNode;
+            // setup linked list first and add as first element
+            // which points to sentinel
             circles[_centerNode][_circleNode] = SENTINEL_CIRCLE;
         } else {
-            // if already initialised, add new circle element
+            // if already initialised, new circle element points to
+            // previously last element
             circles[_centerNode][_circleNode] = circles[_centerNode][
                 SENTINEL_CIRCLE
             ];
-            circles[_centerNode][SENTINEL_CIRCLE] = _circleNode;
         }
+        // sentinel always points to last added element
+        circles[_centerNode][SENTINEL_CIRCLE] = _circleNode;
     }
 }

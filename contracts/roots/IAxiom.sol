@@ -1,14 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity >=0.8.4;
 
-import "../graph/IGraphNode.sol";
+import "../graph/IGraph.sol";
+import "./IAvatars.sol";
 
-interface IAxiom {
-    function isAvatar(address _avatar) external view returns (bool);
+// solhint-disable no-empty-blocks
+interface IAxiom is IAvatars, IGraph {
 
-    function isNode(IGraphNode _node) external view returns (bool);
-
-    function registeredAvatar(IGraphNode _node) external view returns (address);
-
-    function registeredNode(address _avatar) external view returns (IGraphNode);
 }
